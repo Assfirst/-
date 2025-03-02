@@ -18,7 +18,7 @@ function saveData(studentId, name, club) {
   try {
     // เข้าถึง Google Spreadsheet โดยใช้ ID ของชีต
     // แทนที่ YOUR_SPREADSHEET_ID ด้วย ID จริงของ Google Spreadsheet ของคุณ
-    var ss = SpreadsheetApp.openById('1R_41q_2hBY0nqKhTcBjGQ4A9EvDHM6vJnzWE2WpPdD0');
+    var ss = SpreadsheetApp.openById('YOUR_SPREADSHEET_ID ');
     
     // เข้าถึงชีตแรก (หรือคุณสามารถระบุชื่อชีตได้ เช่น ss.getSheetByName('ชื่อชีต'))
     var sheet = ss.getSheets()[0];
@@ -62,7 +62,7 @@ function getClubStatus() {
 // ฟังก์ชันสำหรับตรวจสอบว่านักเรียนได้ลงทะเบียนไปแล้วหรือไม่
 function checkIfAlreadyRegistered(studentId) {
   try {
-    var ss = SpreadsheetApp.openById('1R_41q_2hBY0nqKhTcBjGQ4A9EvDHM6vJnzWE2WpPdD0');
+    var ss = SpreadsheetApp.openById('YOUR_SPREADSHEET_ID ');
     var sheet = ss.getSheets()[0];
     
     // ดึงข้อมูลทั้งหมดในคอลัมน์รหัสนักเรียน (คอลัมน์ B)
@@ -87,7 +87,7 @@ function checkIfAlreadyRegistered(studentId) {
 // ฟังก์ชันสำหรับส่งออกข้อมูลเป็นไฟล์ CSV
 function exportToCSV() {
   try {
-    var ss = SpreadsheetApp.openById('1R_41q_2hBY0nqKhTcBjGQ4A9EvDHM6vJnzWE2WpPdD0');
+    var ss = SpreadsheetApp.openById('YOUR_SPREADSHEET_ID ');
     var sheet = ss.getSheets()[0];
     
     // ดึงข้อมูลทั้งหมดจาก Sheet
@@ -149,7 +149,7 @@ function exportToCSV() {
 // ฟังก์ชันสำหรับนำเข้าข้อมูลจากไฟล์ CSV
 function importFromCSV(csvData) {
   try {
-    var ss = SpreadsheetApp.openById('1R_41q_2hBY0nqKhTcBjGQ4A9EvDHM6vJnzWE2WpPdD0');
+    var ss = SpreadsheetApp.openById('YOUR_SPREADSHEET_ID ');
     var sheet = ss.getSheets()[0];
     
     // แยกข้อมูล CSV เป็นแถว
