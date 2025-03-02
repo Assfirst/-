@@ -1,0 +1,214 @@
+// Code.gs
+
+// ฟังก์ชันที่ทำงานเมื่อเปิดหน้าเว็บ
+function doGet() {
+  return HtmlService.createTemplateFromFile('index')
+    .evaluate()
+    .setTitle('ระบบเลือกชุมนุมโรงเรียนถาวรานุกูล')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+// ฟังก์ชันสำหรับรวม CSS หรือ JavaScript
+function include(filename) {
+  return HtmlService.createHtmlOutputFromFile(filename).getContent();
+}
+
+// ฟังก์ชันสำหรับบันทึกข้อมูลลงใน Google Spreadsheet
+function saveData(studentId, name, club) {
+  try {
+    // เข้าถึง Google Spreadsheet โดยใช้ ID ของชีต
+    // แทนที่ YOUR_SPREADSHEET_ID ด้วย ID จริงของ Google Spreadsheet ของคุณ
+    var ss = SpreadsheetApp.openById('1R_41q_2hBY0nqKhTcBjGQ4A9EvDHM6vJnzWE2WpPdD0');
+    
+    // เข้าถึงชีตแรก (หรือคุณสามารถระบุชื่อชีตได้ เช่น ss.getSheetByName('ชื่อชีต'))
+    var sheet = ss.getSheets()[0];
+    
+    // เก็บข้อมูลวันที่และเวลาปัจจุบัน
+    var timestamp = new Date();
+    
+    // เพิ่มข้อมูลลงในแถวใหม่
+    sheet.appendRow([timestamp, studentId, name, club]);
+    
+    // สร้าง Log เพื่อบันทึกว่ามีการส่งข้อมูลสำเร็จ
+    Logger.log('บันทึกข้อมูลสำเร็จ: ' + studentId + ', ' + name + ', ' + club);
+    
+    // สร้างบันทึกใน Properties Service เพื่อเก็บสถิติ (ตัวอย่างเท่านั้น)
+    var properties = PropertiesService.getScriptProperties();
+    var registrations = parseInt(properties.getProperty('total_registrations') || '0') + 1;
+    properties.setProperty('total_registrations', registrations.toString());
+    
+    return true;
+  } catch(error) {
+    // บันทึกข้อผิดพลาดใน Logger
+    Logger.log('เกิดข้อผิดพลาด: ' + error.toString());
+    
+    // ส่งข้อผิดพลาดกลับไปยังฝั่งไคลเอนต์
+    throw new Error('ไม่สามารถบันทึกข้อมูลได้: ' + error.message);
+  }
+}
+
+// ฟังก์ชันสำหรับตรวจสอบสถานะของชุมนุม (ว่ามีที่ว่างหรือไม่)
+function getClubStatus() {
+  // ตัวอย่างข้อมูลเท่านั้น ในการใช้งานจริงคุณควรดึงข้อมูลจาก Spreadsheet
+  return {
+    'ชุมนุมกีฬา': { total: 30, registered: 15 },
+    'ชุมนุมดนตรี': { total: 25, registered: 20 },
+    'ชุมนุมศิลปะ': { total: 20, registered: 10 },
+    'ชุมนุมคอมพิวเตอร์': { total: 25, registered: 22 },
+    'ชุมนุมภาษา': { total: 30, registered: 12 }
+  };
+}
+
+// ฟังก์ชันสำหรับตรวจสอบว่านักเรียนได้ลงทะเบียนไปแล้วหรือไม่
+function checkIfAlreadyRegistered(studentId) {
+  try {
+    var ss = SpreadsheetApp.openById('1R_41q_2hBY0nqKhTcBjGQ4A9EvDHM6vJnzWE2WpPdD0');
+    var sheet = ss.getSheets()[0];
+    
+    // ดึงข้อมูลทั้งหมดในคอลัมน์รหัสนักเรียน (คอลัมน์ B)
+    var studentIds = sheet.getRange('B:B').getValues();
+    
+    // ตรวจสอบว่ามีรหัสนักเรียนนี้อยู่แล้วหรือไม่
+    for (var i = 0; i < studentIds.length; i++) {
+      if (studentIds[i][0] == studentId) {
+        // หากพบรหัสนักเรียนนี้แล้ว
+        return true;
+      }
+    }
+    
+    // หากไม่พบรหัสนักเรียนนี้
+    return false;
+  } catch(error) {
+    Logger.log('เกิดข้อผิดพลาดในการตรวจสอบรหัสนักเรียน: ' + error.toString());
+    return false;
+  }
+}
+
+// ฟังก์ชันสำหรับส่งออกข้อมูลเป็นไฟล์ CSV
+function exportToCSV() {
+  try {
+    var ss = SpreadsheetApp.openById('1R_41q_2hBY0nqKhTcBjGQ4A9EvDHM6vJnzWE2WpPdD0');
+    var sheet = ss.getSheets()[0];
+    
+    // ดึงข้อมูลทั้งหมดจาก Sheet
+    var data = sheet.getDataRange().getValues();
+    
+    // แปลงข้อมูลเป็นรูปแบบ CSV
+    var csvFile = "";
+    
+    // สร้างหัวคอลัมน์ (ถ้าต้องการกำหนดเอง)
+    // csvFile = "วันที่และเวลา,รหัสนักเรียน,ชื่อ-นามสกุล,ชุมนุม\n";
+    
+    // สร้างเนื้อหา CSV จากข้อมูลใน Sheet
+    for (var i = 0; i < data.length; i++) {
+      var row = "";
+      for (var j = 0; j < data[i].length; j++) {
+        // ตรวจสอบว่าเป็น Date หรือไม่
+        if (data[i][j] instanceof Date) {
+          row += Utilities.formatDate(data[i][j], Session.getScriptTimeZone(), "yyyy-MM-dd HH:mm:ss");
+        } else {
+          // ถ้าข้อมูลมีเครื่องหมาย , ให้ใส่ "" ครอบ
+          if (String(data[i][j]).indexOf(',') > -1) {
+            row += '"' + data[i][j] + '"';
+          } else {
+            row += data[i][j];
+          }
+        }
+        
+        // เพิ่มเครื่องหมาย , ถ้าไม่ใช่คอลัมน์สุดท้าย
+        if (j < data[i].length - 1) {
+          row += ',';
+        }
+      }
+      csvFile += row + '\n';
+    }
+    
+    // สร้างไฟล์ CSV ใน Google Drive
+    var folder = DriveApp.getRootFolder();
+    var fileName = 'ข้อมูลชุมนุม_' + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd_HH-mm-ss") + '.csv';
+    var file = folder.createFile(fileName, csvFile, MimeType.CSV);
+    
+    // สร้าง URL สำหรับดาวน์โหลดไฟล์
+    var url = file.getDownloadUrl();
+    
+    return {
+      success: true,
+      fileId: file.getId(),
+      fileName: fileName,
+      downloadUrl: url
+    };
+  } catch(error) {
+    Logger.log('เกิดข้อผิดพลาดในการส่งออกไฟล์ CSV: ' + error.toString());
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+// ฟังก์ชันสำหรับนำเข้าข้อมูลจากไฟล์ CSV
+function importFromCSV(csvData) {
+  try {
+    var ss = SpreadsheetApp.openById('1R_41q_2hBY0nqKhTcBjGQ4A9EvDHM6vJnzWE2WpPdD0');
+    var sheet = ss.getSheets()[0];
+    
+    // แยกข้อมูล CSV เป็นแถว
+    var rows = Utilities.parseCsv(csvData);
+    
+    // ตรวจสอบว่ามีหัวคอลัมน์หรือไม่ (ถ้ามีให้ข้ามแถวแรก)
+    var startRow = 0;
+    
+    // ถ้าต้องการให้ตรวจสอบหัวคอลัมน์ สามารถเปิดใช้โค้ดนี้
+    /*
+    if (rows.length > 0) {
+      var headers = rows[0];
+      // ตรวจสอบว่าหัวคอลัมน์ตรงกับที่คาดหวังหรือไม่
+      if (headers[1] === 'รหัสนักเรียน' && headers[2] === 'ชื่อ-นามสกุล' && headers[3] === 'ชุมนุม') {
+        startRow = 1; // ข้ามแถวแรกที่เป็นหัวคอลัมน์
+      }
+    }
+    */
+    
+    // เตรียมข้อมูลสำหรับเพิ่มลงใน Sheet
+    var dataToImport = [];
+    
+    for (var i = startRow; i < rows.length; i++) {
+      var rowData = rows[i];
+      
+      // ตรวจสอบว่าข้อมูลครบถ้วนหรือไม่ (ต้องมีอย่างน้อย 3 คอลัมน์: รหัสนักเรียน, ชื่อ, ชุมนุม)
+      if (rowData.length >= 3 && rowData[0] && rowData[1] && rowData[2]) {
+        // ถ้าไม่มีคอลัมน์เวลา ให้เพิ่มเวลาปัจจุบัน
+        if (rowData.length < 4 || !rowData[0]) {
+          var timestamp = new Date();
+          dataToImport.push([timestamp, rowData[1], rowData[2], rowData[3]]);
+        } else {
+          // ถ้ามีข้อมูลครบแล้ว ลองแปลงคอลัมน์แรกเป็นวันที่
+          try {
+            var date = new Date(rowData[0]);
+            dataToImport.push([date, rowData[1], rowData[2], rowData[3]]);
+          } catch (e) {
+            var timestamp = new Date();
+            dataToImport.push([timestamp, rowData[1], rowData[2], rowData[3]]);
+          }
+        }
+      }
+    }
+    
+    // เพิ่มข้อมูลลงใน Sheet
+    if (dataToImport.length > 0) {
+      var lastRow = sheet.getLastRow();
+      sheet.getRange(lastRow + 1, 1, dataToImport.length, 4).setValues(dataToImport);
+    }
+    
+    return {
+      success: true,
+      totalImported: dataToImport.length
+    };
+  } catch(error) {
+    Logger.log('เกิดข้อผิดพลาดในการนำเข้าไฟล์ CSV: ' + error.toString());
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
